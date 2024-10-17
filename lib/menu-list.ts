@@ -5,9 +5,9 @@ import {
     Bookmark,
     SquarePen,
     LayoutGrid,
+    Link,
     LucideIcon
 } from "lucide-react";
-
 type Submenu = {
     href: string;
     label: string;
@@ -64,9 +64,9 @@ export function getMenuList(pathname: string): Group[] {
                     icon: Bookmark
                 },
                 {
-                    href: "/tags",
-                    label: "Tags",
-                    icon: Tag
+                    href: "/excel-sheet",
+                    label: "Excel Link & Sheet",
+                    icon: Link
                 }
             ]
         },
