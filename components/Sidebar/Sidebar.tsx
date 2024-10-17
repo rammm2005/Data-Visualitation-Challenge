@@ -44,7 +44,7 @@ export function Sidebar() {
                                     : "translate-x-0 opacity-100"
                             )}
                         >
-                            Brand
+                            Data Visualitation
                         </h1>
                     </Link>
                 </Button>
