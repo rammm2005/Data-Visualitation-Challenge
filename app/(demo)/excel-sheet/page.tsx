@@ -8,6 +8,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { FormSchema } from "@/types/sheet";
 import { FileSymlink, Edit, Trash, Loader } from "lucide-react";
+import { getSpreadsheetIdAndRange } from "@/lib/getSpreadshetIds";
 import { ContentLayout } from "@/components/admin-panel/content-layouts";
 import {
     Breadcrumb,
@@ -40,13 +41,14 @@ const isValidSpreadsheetLink = (link: string) => {
 export default function ExcelSheet() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [links, setLinks] = useState<{ id: string; link: string }[]>([]);
+    const [links, setLinks] = useState<{ id: string; link: string; spreadsheetId: string; range: string }[]>([]);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
             link: "",
+            range: "",
         },
     });
 
@@ -57,7 +59,7 @@ export default function ExcelSheet() {
         }
     }, []);
 
-    const columns: ColumnDef<{ id: string; link: string }>[] = [
+    const columns: ColumnDef<{ id: string; link: string; spreadsheetId: string; range: string }>[] = [
         {
             accessorKey: "id",
             header: "ID",
@@ -69,6 +71,16 @@ export default function ExcelSheet() {
         {
             accessorKey: "link",
             header: "Link",
+            cell: (info) => info.getValue(),
+        },
+        {
+            accessorKey: "spreadsheetId",
+            header: "Spreadsheet ID",
+            cell: (info) => info.getValue(),
+        },
+        {
+            accessorKey: "range",
+            header: "Range",
             cell: (info) => info.getValue(),
         },
         {
@@ -94,6 +106,7 @@ export default function ExcelSheet() {
         },
     ];
 
+
     const saveToLocalStorage = (newLinks: { id: string; link: string }[]) => {
         localStorage.setItem("spreadsheetLinks", JSON.stringify(newLinks));
     };
@@ -107,18 +120,29 @@ export default function ExcelSheet() {
             return;
         }
 
+        const parsedData = getSpreadsheetIdAndRange(data.link, data.range);
+
+        if (!parsedData) {
+            form.setError("link", { type: "manual", message: "Invalid Google Spreadsheet link." });
+            setLoading(false);
+            return;
+        }
+
+        const { spreadsheetId } = parsedData;
+
+        const range = data.range || parsedData.range;
+
         try {
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             if (editingId) {
                 const updatedLinks = links.map((item) =>
-                    item.id === editingId ? { ...item, link: data.link } : item
+                    item.id === editingId ? { ...item, link: data.link, spreadsheetId, range: data.range } : item
                 );
                 setLinks(updatedLinks);
                 saveToLocalStorage(updatedLinks);
-                setEditingId(null);
             } else {
-                const newLink = { id: uuidv4(), link: data.link };
+                const newLink = { id: uuidv4(), link: data.link, spreadsheetId, range };
                 const updatedLinks = [...links, newLink];
                 setLinks(updatedLinks);
                 saveToLocalStorage(updatedLinks);
@@ -145,14 +169,15 @@ export default function ExcelSheet() {
         }
     };
 
+
     const handleEdit = (id: string) => {
         const linkToEdit = links.find((item) => item.id === id);
         if (linkToEdit) {
             form.setValue("link", linkToEdit.link);
+            form.setValue("range", linkToEdit.range);
             setEditingId(id);
         }
     };
-
     const handleDelete = (id: string) => {
         const updatedLinks = links.filter((item) => item.id !== id);
         setLinks(updatedLinks);
@@ -207,6 +232,28 @@ export default function ExcelSheet() {
                                 </FormItem>
                             )}
                         />
+
+                        <FormField
+                            control={form.control}
+                            name="range"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Range</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter the spreadsheet range (e.g., 'Sheet1!A1:D100')"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>
+                                        You can specify the range for data extraction (e.g., Sheet1!A1:D100). If left blank, a default range will be used.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+
                         <Button type="submit" disabled={loading} className="flex items-center">
                             {loading ? (
                                 <span className="flex items-center">
