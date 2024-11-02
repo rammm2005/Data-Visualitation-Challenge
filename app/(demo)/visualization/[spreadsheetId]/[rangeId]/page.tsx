@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { VisualizationPageProps } from '@/types/visualUrl';
 import { useRouter } from 'next/navigation';
-import { DataTable } from '@/components/Table/data-table';
+import { DataTable } from '@/components/Table/data-table-dync';
 import { VisualizationChart } from '@/components/chart/VisualizationChart';
 import { fetchSheetData } from '@/lib/fetchData';
 import InteractiveERD from '@/components/ERD/InteractiveERD';
@@ -32,61 +32,30 @@ import {
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
+import { DataRow, StoredData, ChartDataProps, Node, Edge, ERDData } from '@/types/data';
+import { ColumnDef, CellContext } from '@tanstack/react-table';
+import { LoadingIndicator } from '@/components/loading/loading';
 
-type DataRow = {
-    name: string;
-    gender: string;
-    batch: string;
-    age: string;
-    major: string;
+export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[] => {
+    const headers = fetchedData[0];
+    return fetchedData.slice(1).map(row => {
+        const rowData: DataRow<string> = {};
+        headers.forEach((header, index) => {
+            rowData[header] = row[index] || '';
+        });
+        return rowData;
+    });
 };
 
-type StoredData = {
-    spreadsheetId: string;
-    range: string;
-};
+export const transformToChartData = (data: DataRow<string>[]): ChartDataProps<string> => {
+    const labels = data.map(row => row.Nama);
+    const datasetData = data.map(row => Number(row.Status) || 0);
 
-type ChartDataProps = {
-    labels: string[];
-    datasets: {
-        label: string;
-        data: number[];
-        backgroundColor: string[];
-    }[];
-};
-
-type Node = {
-    id: string;
-    data: { label: string };
-    position: { x: number; y: number };
-};
-
-type Edge = {
-    id: string;
-    source: string;
-    target: string;
-};
-
-type ERDData = {
-    nodes: Node[];
-    edges: Edge[];
-};
-
-
-const transformFetchedData = (fetchedData: string[][]): DataRow[] => {
-    return fetchedData.map(row => ({
-        name: row[0] || "",
-        gender: row[1] || "",
-        batch: row[2] || "",
-        age: row[3] || "",
-        major: row[4] || "",
-    }));
-};
-
-const transformToChartData = (data: DataRow[]): ChartDataProps => {
-    const labels = data.map(row => row.name);
-    const datasetData = data.map(row => Number(row.age) || 0);
+    const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 40%, 1)`;
+    });
 
     return {
         labels,
@@ -94,45 +63,155 @@ const transformToChartData = (data: DataRow[]): ChartDataProps => {
             {
                 label: 'Ages',
                 data: datasetData,
-                backgroundColor: ['rgba(75, 192, 192, 0.6)'],
+                backgroundColor: backgroundColors,
             },
         ],
     };
 };
 
-const transformToPieDoughnutData = (data: DataRow[]): ChartDataProps => {
+export const transformToPieDoughnutData = (data: DataRow<string>[]): ChartDataProps<string> => {
     const genderCounts = data.reduce((acc, row) => {
-        acc[row.gender] = (acc[row.gender] || 0) + 1;
+        acc[row.Fakuktas] = (acc[row.Fakuktas] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
     const labels = Object.keys(genderCounts);
     const datasetData = Object.values(genderCounts);
+    const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 50%, 0.2)`;
+    });
 
     return {
         labels,
         datasets: [
             {
-                label: 'Gender Distribution',
+                label: 'Fakultas Distribution',
                 data: datasetData,
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(255, 206, 86, 0.6)',
-                ],
+                backgroundColor: backgroundColors,
             },
         ],
     };
-}
+};
 
-const transformToERDData = (data: DataRow[]): ERDData => {
+export const transformChartNim = (data: DataRow<string>[]): ChartDataProps<string> => {
+    const cohortCounts = data.reduce((acc, row) => {
+        const nim = row.NIM || row.nim || row.Nim;
+        if (nim && nim.length >= 2) {
+            const cohort = nim.slice(0, 2);
+            acc[cohort] = (acc[cohort] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const labels = Object.keys(cohortCounts).map(cohort => `Angkatan ${cohort}`);
+    const datasetData = Object.values(cohortCounts);
+
+    const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 50%, 0.6)`;
+    });
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Angkatan',
+                data: datasetData,
+                backgroundColor: backgroundColors,
+            },
+        ],
+    };
+};
+
+
+export const transformGraduationChart = (data: DataRow<string>[]): ChartDataProps<string> => {
+    const graduationCounts = data.reduce((acc, row) => {
+        const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt || row.TMT || row.Tamat;
+        if (graduationYear) {
+            acc[graduationYear] = (acc[graduationYear] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
+    const labels = Object.keys(graduationCounts);
+    const datasetData = Object.values(graduationCounts);
+    const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 50%, 0.2)`;
+    });
+    const borderColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 40%, 1)`;
+    });
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Lulusan',
+                data: datasetData,
+                borderColor: borderColors,
+                backgroundColor: backgroundColors,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+            },
+        ],
+    };
+};
+
+export const transformActiveLearningChart = (data: DataRow<string>[]): ChartDataProps<string> => {
+    const activeCounts = data.reduce((acc, row) => {
+        const status = row.aktif || row.Status;
+        const learningStatus = status && status.toLowerCase() === 'aktif' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
+        acc[learningStatus] = (acc[learningStatus] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const labels = ['aktif (belajar)', 'tidak aktif (belajar)'];
+    const datasetData = [
+        activeCounts['aktif (belajar)'] || 0,
+        activeCounts['tidak aktif (belajar)'] || 0
+    ];
+
+    const backgroundColors = labels.map((_, index) => {
+        return index === 0 ? 'rgba(75, 192, 192, 0.2)' : 'rgba(255, 99, 132, 0.2)';
+    });
+
+    const borderColors = labels.map((_, index) => {
+        return index === 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
+    });
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Status Belajar',
+                data: datasetData,
+                borderColor: borderColors,
+                backgroundColor: backgroundColors,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+            },
+        ],
+    };
+};
+
+
+
+
+
+
+export const transformToERDData = (data: DataRow<string>[]): ERDData<string> => {
     const radius = 200;
     const centerX = 250;
     const centerY = 250;
 
     const nodes = data.map((row, index) => ({
         id: String(index + 1),
-        data: { label: row.name },
+        data: { label: row.Nama },
         position: {
             x: centerX + radius * Math.cos((index / data.length) * 2 * Math.PI),
             y: centerY + radius * Math.sin((index / data.length) * 2 * Math.PI)
@@ -148,28 +227,31 @@ const transformToERDData = (data: DataRow[]): ERDData => {
     return { nodes, edges };
 };
 
-
-
 export default function VisualizationPage({ params }: VisualizationPageProps) {
     const router = useRouter();
     const [spreadsheetIdState, setSpreadsheetIdState] = useState<string | null>(null);
     const [rangeState, setRangeState] = useState<string | null>(null);
-    const [data, setData] = useState<DataRow[]>([]);
-    const [erdData, setErdData] = useState<ERDData>({ nodes: [], edges: [] });
-    const [chartType, setChartType] = useState<'bar' | 'line' | 'radar' | 'polarArea' | 'bubble' | 'scatter'
-    >("line");
+    const [data, setData] = useState<DataRow<string>[]>([]);
+    const [erdData, setErdData] = useState<ERDData<string>>({ nodes: [], edges: [] });
+    const [chartType, setChartType] = useState<'bar' | 'line' | 'radar' | 'polarArea' | 'bubble' | 'scatter'>("line");
     const [showChart, setShowChart] = useState(true);
     const toggleChartVisibility = () => setShowChart(!showChart);
-
-
+    // const [columns, setColumns] = useState<{ header: string; accessor: string; }[]>([]);
+    const [columns, setColumns] = useState<ColumnDef<DataRow>[] | []>([]);
+    const [loading, setLoading] = useState({
+        table: true,
+        chart: true,
+        secondChart: true,
+        Erd: true,
+    });
 
     useEffect(() => {
         const { spreadsheetId, rangeId } = params;
-        console.log('URL : ' , spreadsheetId, rangeId);
+        console.log('URL : ', spreadsheetId, rangeId);
 
         if (spreadsheetId && rangeId) {
             const storedData = localStorage.getItem('spreadsheetLinks');
-            console.log(storedData);
+            console.log('Stored Data: ', storedData);
 
             if (storedData) {
                 const parsedData: StoredData[] = JSON.parse(storedData);
@@ -179,34 +261,50 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                 );
 
                 if (matchedItem) {
+                    setLoading(prev => ({ ...prev, table: true, chart: true, secondChart: true, Erd: true }));
                     setSpreadsheetIdState(matchedItem.spreadsheetId);
                     setRangeState(matchedItem.range);
                     fetchSheetData(matchedItem.spreadsheetId, matchedItem.range)
                         .then(fetchedData => {
-                            if (fetchedData) {
+                            if (fetchedData && fetchedData.length > 0) {
+                                console.log('Fetched Data: ', fetchedData);
                                 const transformedData = transformFetchedData(fetchedData);
+
+                                const headers = fetchedData[0];
+                                const dynamicColumns = headers.map((header: string) => ({
+                                    header: header,
+                                    accessorKey: header,
+                                    cell: (info: CellContext<DataRow, string | number>) => info.getValue()
+                                })) as ColumnDef<DataRow>[];
+                                setColumns(dynamicColumns);
                                 setData(transformedData);
+
+                                console.log('Data to DataTable:', transformedData);
+                                console.log('Columns to DataTable:', dynamicColumns);
                                 setErdData(transformToERDData(transformedData));
                             } else {
-                                // router.push('/404');
+                                console.error('No data fetched.');
                             }
                         })
-                        .catch(() => {
-                            // router.push('/404');
+                        .catch((error) => {
+                            console.error('Error fetching data: ', error);
+                        })
+                        .finally(() => {
+                            setLoading(prev => ({ ...prev, table: false, chart: false, secondChart: false, Erd: false }));
                         });
                 } else {
-                    // router.push('/404');
+                    console.error('No matching item found.');
                 }
             } else {
-                // router.push('/404');
+                console.error('No stored data found.');
             }
         } else {
-            // router.push('/404');
+            console.error('Invalid parameters.');
         }
     }, [params, router]);
 
     const handleNodeDragStop = (nodeId: string, newPosition: { x: number; y: number }) => {
-        setErdData((prevErdData: ERDData) => {
+        setErdData(prevErdData => {
             const updatedNodes = prevErdData.nodes.map(node => {
                 if (node.id === nodeId) {
                     return { ...node, position: newPosition };
@@ -217,16 +315,12 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
         });
     };
 
-    const columns = [
-        { header: "Name", accessor: "name" },
-        { header: "Gender", accessor: "gender" },
-        { header: "Batch", accessor: "batch" },
-        { header: "Age", accessor: "age" },
-        { header: "Major", accessor: "major" },
-    ];
-
     const chartData = transformToChartData(data);
     const pieDoughnutData = transformToPieDoughnutData(data);
+    const NimChart = transformChartNim(data);
+    const ChartGraduation = transformGraduationChart(data);
+    const aciveLearn = transformActiveLearningChart(data);
+
     return (
         <ContentLayout title="Visualisasi Data">
             <Breadcrumb>
@@ -263,12 +357,9 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                             <div className="flex flex-row justify-between items-center">
                                 <div className="flex flex-row gap-3 items-center">
                                     <h1 className='text-2xl font-bold'>Data Overview </h1>
-
                                     <ChartArea />
-
                                 </div>
                                 <div className="flex flex-row gap-3 items-center">
-
                                     <div className="flex gap-2">
                                         <Select onValueChange={(value) => setChartType(value as 'bar' | 'line' | 'bubble' | 'scatter')} defaultValue="line">
                                             <SelectTrigger className="w-40">
@@ -276,67 +367,107 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {['bar', 'line', 'bubble', 'scatter'].map(type => (
-                                                    <SelectItem
-                                                        key={type}
-                                                        value={type}
-                                                        className={`${chartType !== type ? "bg-red-500 text-white" : ""
-                                                            }`}
-                                                    >
-                                                        {type.charAt(0).toUpperCase() + type.slice(1)} Chart
+                                                    <SelectItem key={type} value={type}>
+                                                        {type.charAt(0).toUpperCase() + type.slice(1)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        <button
-                                            onClick={toggleChartVisibility}
-                                            className="px-4 py-2 bg-blue-500 text-white rounded"
-                                        >
-                                            {showChart ? "Hide Chart" : "Show Chart"}
-                                        </button>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger>
+                                                    <CircleHelp />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Select the type of chart to display your data visually.
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
                                     </div>
-
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger>
-                                                <CircleHelp className='bg-blue-600/5 text-slate-100/5 rounded-full cursor-pointer' />
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>Click to Learn More</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                                    <button onClick={toggleChartVisibility} className="text-white bg-blue-500 hover:bg-blue-700 font-bold py-2 px-4 rounded">
+                                        {showChart ? "Hide Chart" : "Show Chart"}
+                                    </button>
                                 </div>
-
                             </div>
-                            <DataTable columns={columns} data={data} />
-                            <div className="flex flex-col gap-2">
-                                {showChart && <VisualizationChart data={chartData} chartType={chartType} />}
-                                <div className="grid grid-cols-2 gap-4 mt-10">
-                                    <div className="flex flex-col items-center">
-                                        <h2 className="text-center">Pie Chart</h2>
-                                        <PieDoughnutChart data={pieDoughnutData} chartType="pie" />
-                                    </div>
 
-                                    <div className="flex flex-col items-center">
-                                        <h2 className="text-center">Doughnut Chart</h2>
-                                        <PieDoughnutChart data={pieDoughnutData} chartType="doughnut" />
-                                    </div>
+
+                            <div className="flex flex-row gap-4 items-center">
+                                <div className="md:w-1/2">
+                                    <h2 className='text-xl font-bold mb-4'>Angkatan Overview</h2>
+                                    <PieDoughnutChart chartType='doughnut' data={NimChart} />
                                 </div>
+                                <div className="flex flex-col gap-6 items-center w-full">
+                                    <div className="md:w-1/2">
+                                        <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
+                                        <VisualizationChart data={ChartGraduation} chartType='line' />
+                                    </div>
+                                    <div className="md:w-1/2">
+                                        <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
+                                        <VisualizationChart data={aciveLearn} chartType='line' />
+                                    </div>
 
+                                </div>
                             </div>
+
+                            <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
+                                {loading.table ? (
+                                    <LoadingIndicator message="Loading Table..." />
+                                ) : (
+                                    <div className="md:w-full">
+                                        <h2 className='text-xl font-bold mb-4'>Table Overview</h2>
+                                        <DataTable data={data} columns={columns} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {showChart && (
+                                <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
+                                    {loading.chart ? (
+                                        <LoadingIndicator message="Loading Chart Line..." />
+                                    ) : (
+                                        <div className="md:w-full">
+                                            <h2 className='text-xl font-bold mb-4'>Chart Overview</h2>
+                                            <VisualizationChart data={chartData} chartType={chartType} />
+                                        </div>
+                                    )}
+
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-row md:flex-row md:gap-10 md:items-start my-24">
+                            {
+                                loading.secondChart ? (
+                                    <LoadingIndicator message="Loading Pie & Dounuts Charts..." />
+                                ) : (
+                                    <>
+                                        <div className="md:w-1/2">
+                                            <PieDoughnutChart data={pieDoughnutData} />
+                                        </div>
+                                        <div className="md:w-1/2">
+                                            <PieDoughnutChart chartType='doughnut' data={pieDoughnutData} />
+                                        </div>
+                                    </>
+                                )
+                            }
 
                         </div>
-                        <div className="py-10 px-6 border rounded-lg shadow-md mt-6">
-                            <h2 className="text-xl font-semibold mb-4">Entity-Relationship Diagram (ERD)</h2>
-                            <InteractiveERD
-                                onNodeDragStop={handleNodeDragStop}
-                                nodes={erdData.nodes}
-                                edges={erdData.edges}
-                            />
+
+                        <div className="py-10 px-6 grid grid-col-1 gap-10 border rounded-lg shadow-md">
+                            {
+                                loading.Erd ? (
+                                    <LoadingIndicator message="Loading ERD Data..." />
+                                ) : (
+                                    <>
+                                        <h1 className='text-2xl font-bold'>Entity Relationship Diagram</h1>
+                                        <InteractiveERD nodes={erdData.nodes} edges={erdData.edges} onNodeDragStop={handleNodeDragStop} />
+                                    </>
+                                )
+                            }
                         </div>
                     </>
                 ) : (
-                    <p className="text-red-500">Data tidak tersedia.</p>
+                    <div>No Data Available</div>
                 )}
             </div>
         </ContentLayout>
