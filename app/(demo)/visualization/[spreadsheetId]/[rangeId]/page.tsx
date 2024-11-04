@@ -71,36 +71,44 @@ export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[]
 
 export const transformToChartData = (
     data: DataRow<string>[],
-    filterBy: 'graduates' | 'active',
+    filterBy: 'graduates' | 'active' | 'fakultas',
     faculty?: string
 ): ChartDataProps<string> => {
-    const filteredData = data.filter((row) => {
-        if (faculty && row.Fakultas !== faculty) {
-            return false;
-        }
+    let countsByCategory: Record<string, number> = {};
 
-        if (filterBy === 'graduates') {
-            return row.Status === 'Graduated';
-        } else if (filterBy === 'active') {
-            return row.Status === 'Active';
-        }
-        return true;
-    });
+    if (filterBy === 'graduates') {
+        countsByCategory = data.reduce((acc, row) => {
+            const graduationYear = row.TMT;
+            if (graduationYear) {
+                const formattedMonthYear = formatMonthYear(graduationYear);
+                acc[formattedMonthYear] = (acc[formattedMonthYear] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+    } else if (filterBy === 'active') {
+        countsByCategory = data.reduce((acc, row) => {
+            const status = row.aktif || row.Status;
+            const learningStatus = status?.toLowerCase() === 'aktif (belajar)' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
+            acc[learningStatus] = (acc[learningStatus] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+    } else if (filterBy === 'fakultas') {
+        countsByCategory = data.reduce((acc, row) => {
+            if (faculty) {
+                if (row.Jurusan === faculty) {
+                    const facultyName = row.Jurusan;
+                    acc[facultyName] = (acc[facultyName] || 0) + 1;
+                }
+            } else {
+                const facultyName = row.Jurusan;
+                acc[facultyName] = (acc[facultyName] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+    }
 
-    const graduationCounts = filteredData.reduce((acc, row) => {
-        const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt;
-        if (graduationYear) {
-            const formattedMonthYear = formatMonthYear(graduationYear);
-            const date = formatDate(graduationYear);
-            acc[formattedMonthYear] = acc[formattedMonthYear] || { count: 0, dates: {} };
-            acc[formattedMonthYear].count += 1;
-            acc[formattedMonthYear].dates[date] = (acc[formattedMonthYear].dates[date] || 0) + 1;
-        }
-        return acc;
-    }, {} as Record<string, { count: number; dates: Record<string, number> }>);
-
-    const labels = Object.keys(graduationCounts);
-    const datasetData = labels.map((label) => graduationCounts[label].count);
+    const labels = Object.keys(countsByCategory);
+    const datasetData = labels.map((label) => countsByCategory[label]);
 
     const backgroundColors = labels.map((_, index) => {
         const hue = (index * 360) / labels.length;
@@ -111,11 +119,14 @@ export const transformToChartData = (
         return `hsla(${hue}, 70%, 40%, 1)`;
     });
 
+    const datasetLabel =
+        filterBy === 'graduates' ? 'Graduates' : filterBy === 'active' ? 'Active Students' : 'Fakultas Data';
+
     return {
         labels,
         datasets: [
             {
-                label: filterBy === 'graduates' ? 'Graduates' : 'Active Students',
+                label: datasetLabel,
                 data: datasetData,
                 borderColor: borderColors,
                 backgroundColor: backgroundColors,
@@ -126,6 +137,10 @@ export const transformToChartData = (
         ],
     };
 };
+
+
+
+
 
 
 // export const transformToChartDataLogICAllWork = (
@@ -439,6 +454,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     const [showChart, setShowChart] = useState(true);
     const toggleChartVisibility = () => setShowChart(!showChart);
     const [columns, setColumns] = useState<ColumnDef<DataRow>[] | []>([]);
+    const [filterBy, setFilterBy] = useState<'graduates' | 'active' | 'fakultas'>('graduates');
     const [loading, setLoading] = useState({
         table: true,
         chart: true,
@@ -518,7 +534,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     };
 
 
-    const chartData = transformToChartData(data);
+    const chartData = transformToChartData(data, filterBy);
     const pieDoughnutData = transformToPieDoughnutData(data);
     const NimChart = transformChartNim(data);
     const ChartGraduation = transformGraduationChart(data);
@@ -609,7 +625,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                         </div>
                                     </div>
                                     <div>
-                                        <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
+                                        <h2 className='text-xl font-bold mb-4'>Chart Aktif Kuliah Overview</h2>
                                         <div className="h-[300px]">
                                             <VisualizationChart data={aciveLearn} chartType='bar' />
                                         </div>
@@ -628,7 +644,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                 )}
                             </div>
 
-                            {showChart && (
+                            {/* {showChart && (
                                 <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
                                     {loading.chart ? (
                                         <LoadingIndicator message="Loading Chart Line..." />
@@ -640,7 +656,63 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                     )}
 
                                 </div>
-                            )}
+                            )} */}
+
+                            <div>
+                                <div className="flex flex-row gap-4 items-center filter-options mb-4">
+                                    <label className="mr-4 flex flex-row gap-2 items-center">
+                                        <input
+                                            type="radio"
+                                            name="filterBy"
+                                            value="graduates"
+                                            checked={filterBy === 'graduates'}
+                                            onChange={() => setFilterBy('graduates')}
+                                        />
+                                        Graduates
+                                    </label>
+                                    <label className="mr-4 flex flex-row gap-2 items-center">
+                                        <input
+                                            type="radio"
+                                            name="filterBy"
+                                            value="active"
+                                            checked={filterBy === 'active'}
+                                            onChange={() => setFilterBy('active')}
+                                        />
+                                        Active Students
+                                    </label>
+
+                                    <label className="mr-4 flex flex-row gap-2 items-center">
+                                        <input
+                                            type="radio"
+                                            name="filterBy"
+                                            value="fakultas"
+                                            checked={filterBy === 'fakultas'}
+                                            onChange={() => setFilterBy('fakultas')}
+                                        />
+                                        Fakultas
+                                    </label>
+                                    {/* <input
+                                        type="text"
+                                        placeholder="Enter Faculty (Optional)"
+                                        value={faculty || ''}
+                                        onChange={(e) => setFaculty(e.target.value || undefined)}
+                                        className="ml-4 p-2 border rounded"
+                                    /> */}
+                                </div>
+
+                                {showChart && (
+                                    <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
+                                        {loading.chart ? (
+                                            <LoadingIndicator message="Loading Chart Line..." />
+                                        ) : (
+                                            <div className="md:w-full">
+                                                <h2 className="text-xl font-bold mb-4">Chart Overview</h2>
+                                                <VisualizationChart data={chartData} chartType={chartType} />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="flex flex-row md:flex-row md:gap-10 md:items-start my-24">
