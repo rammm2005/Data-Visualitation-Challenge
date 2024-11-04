@@ -1,3 +1,5 @@
+export type NodeDataType = "PK" | "FK" | "Normal" | "String" | "Number" | "Code" | "Char" | "Decimal" | "UUID";
+
 
 export type DataRow<T extends string = string> = {
     [key in T]: string;
@@ -23,7 +25,10 @@ export type ChartDataProps<T extends string = string> = {
 
 export type Node<T extends string = string> = {
     id: T;
-    data: { label: T };
+    data: {
+        label: T;
+        type: NodeDataType;
+    };
     position: { x: number; y: number };
 };
 

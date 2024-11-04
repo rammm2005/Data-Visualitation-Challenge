@@ -1,12 +1,12 @@
-
 import { ImageDown } from 'lucide-react';
 import React, { useState } from 'react';
-import ReactFlow, { MiniMap, Controls, Background, Node } from 'react-flow-renderer';
+import ReactFlow, { MiniMap, Controls, Background, Node, Edge } from 'react-flow-renderer';
 
 type NodeData = {
     id: string;
     data: {
         label: string;
+        type: 'PK' | 'FK' | 'Normal' | 'String' | 'Number' | 'Code' | 'Char' | 'Decimal' | 'UUID';
     };
     position: {
         x: number;
@@ -24,14 +24,23 @@ type InteractiveERDProps = {
     nodes?: NodeData[];
     edges?: EdgeData[];
     onNodeDragStop?: (nodeId: string, position: { x: number; y: number }) => void;
+    onEdgeChange?: (edgeId: string, newSource: string, newTarget: string) => void;
 };
 
-const InteractiveERD: React.FC<InteractiveERDProps> = ({ nodes = [], edges = [], onNodeDragStop }) => {
+const InteractiveERD: React.FC<InteractiveERDProps> = ({ nodes = [], edges = [], onNodeDragStop, onEdgeChange }) => {
     const [menuOpen, setMenuOpen] = useState(false);
 
     const handleNodeDragStop = (event: React.MouseEvent, node: Node) => {
         if (onNodeDragStop) {
             onNodeDragStop(node.id, node.position);
+        }
+    };
+
+    const handleEdgeDoubleClick = (event: React.MouseEvent, edge: Edge) => {
+        const newSource = prompt("Masukkan ID node sumber:");
+        const newTarget = prompt("Masukkan ID node target:");
+        if (newSource && newTarget) {
+            onEdgeChange?.(edge.id, newSource, newTarget);
         }
     };
 
@@ -75,7 +84,6 @@ const InteractiveERD: React.FC<InteractiveERDProps> = ({ nodes = [], edges = [],
         setMenuOpen(false);
     };
 
-
     const convertToDrawIOFormat = (nodes: NodeData[], edges: EdgeData[]) => {
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
         <mxfile host="app.diagrams.net">
@@ -86,8 +94,11 @@ const InteractiveERD: React.FC<InteractiveERDProps> = ({ nodes = [], edges = [],
                         <mxCell id="1" parent="0" />`;
 
         nodes.forEach(node => {
+            const style = node.data.type === 'PK' ? 'shape=box;fillColor=#FFD700;' :
+                node.data.type === 'FK' ? 'shape=ellipse;fillColor=#ADD8E6;' :
+                    'shape=rounded;fillColor=#FFFFFF;';
             xml += `
-                <mxCell id="${node.id}" value="${node.data.label}" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="${node.id}" value="${node.data.label}" style="${style}whiteSpace=wrap;html=1;" vertex="1" parent="1">
                     <mxGeometry x="${node.position.x}" y="${node.position.y}" width="100" height="40" as="geometry" />
                 </mxCell>`;
         });
@@ -135,11 +146,11 @@ const InteractiveERD: React.FC<InteractiveERDProps> = ({ nodes = [], edges = [],
                 )}
             </div>
 
-
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodeDragStop={handleNodeDragStop}
+                onEdgeDoubleClick={handleEdgeDoubleClick}
                 style={{ width: '100%', height: '400px' }}
             >
                 <MiniMap />

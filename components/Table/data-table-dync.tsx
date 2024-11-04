@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { DataTablePagination } from "./pagination";
 import { Input } from "@/components/ui/input";
@@ -66,7 +67,7 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                                 <TableHead
                                     key={header.id}
                                     onClick={header.column.getToggleSortingHandler()}
-                                    className={header.column.getIsSorted() ? "bg-gray-200" : ""}
+                                    className={header.column.getIsSorted() ? "flex flex-row justify-between transition-all ease-in-out duration-200 gap-2 items-center cursor-pointer dark:bg-gray-800 bg-gray-200" : "cursor-pointer"}
                                 >
                                     {header.isPlaceholder
                                         ? null
@@ -76,8 +77,12 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                                         )}
                                     <span>
                                         {{
-                                            asc: ' 🔼',
-                                            desc: ' 🔽',
+                                            asc:
+                                                <ChevronUp />
+                                            ,
+                                            desc:
+                                                <ChevronDown />
+                                            ,
                                         }[header.column.getIsSorted() as string] ?? null}
                                     </span>
                                 </TableHead>

@@ -33,7 +33,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataRow, StoredData, ChartDataProps, Node, Edge, ERDData } from '@/types/data';
+import { DataRow, StoredData, ChartDataProps, Node, NodeDataType, Edge, ERDData } from '@/types/data';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { LoadingIndicator } from '@/components/loading/loading';
 
@@ -129,13 +129,18 @@ export const transformGraduationChart = (data: DataRow<string>[]): ChartDataProp
     const graduationCounts = data.reduce((acc, row) => {
         const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt || row.TMT || row.Tamat;
         if (graduationYear) {
-            acc[graduationYear] = (acc[graduationYear] || 0) + 1;
+            const formattedMonthYear = formatMonthYear(graduationYear);
+            const date = formatDate(graduationYear);
+            acc[formattedMonthYear] = acc[formattedMonthYear] || { count: 0, dates: {} };
+            acc[formattedMonthYear].count += 1;
+
+            acc[formattedMonthYear].dates[date] = (acc[formattedMonthYear].dates[date] || 0) + 1;
         }
         return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { count: number, dates: Record<string, number> }>);
 
     const labels = Object.keys(graduationCounts);
-    const datasetData = Object.values(graduationCounts);
+    const datasetData = labels.map(label => graduationCounts[label].count);
     const backgroundColors = labels.map((_, index) => {
         const hue = (index * 360) / labels.length;
         return `hsla(${hue}, 70%, 50%, 0.2)`;
@@ -161,10 +166,57 @@ export const transformGraduationChart = (data: DataRow<string>[]): ChartDataProp
     };
 };
 
+const formatMonthYear = (dateString: string): string => {
+    const parts = dateString.split('/');
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const year = parts[2];
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return `${monthNames[monthIndex]} ${year}`;
+};
+
+const formatDate = (dateString: string): string => {
+    const parts = dateString.split('/');
+    const day = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const year = parts[2];
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return `${day} ${monthNames[monthIndex]} ${year}`;
+};
+
+export const getGraduationDetails = (data: DataRow<string>[], selectedMonthYear: string): Record<string, number> => {
+    const graduationDetails: Record<string, number> = {};
+
+    data.forEach(row => {
+        const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt || row.TMT || row.Tamat;
+        if (graduationYear) {
+            const monthYear = formatMonthYear(graduationYear);
+            const date = formatDate(graduationYear);
+
+            if (monthYear === selectedMonthYear) {
+                graduationDetails[date] = (graduationDetails[date] || 0) + 1;
+            }
+        }
+    });
+
+    return graduationDetails;
+};
+
+
+
 export const transformActiveLearningChart = (data: DataRow<string>[]): ChartDataProps<string> => {
     const activeCounts = data.reduce((acc, row) => {
         const status = row.aktif || row.Status;
-        const learningStatus = status && status.toLowerCase() === 'aktif' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
+        const learningStatus = status?.toLowerCase() === 'aktif (belajar)' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
         acc[learningStatus] = (acc[learningStatus] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
@@ -175,13 +227,7 @@ export const transformActiveLearningChart = (data: DataRow<string>[]): ChartData
         activeCounts['tidak aktif (belajar)'] || 0
     ];
 
-    const backgroundColors = labels.map((_, index) => {
-        return index === 0 ? 'rgba(75, 192, 192, 0.2)' : 'rgba(255, 99, 132, 0.2)';
-    });
-
-    const borderColors = labels.map((_, index) => {
-        return index === 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)';
-    });
+    const backgroundColors = ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'];
 
     return {
         labels,
@@ -189,17 +235,12 @@ export const transformActiveLearningChart = (data: DataRow<string>[]): ChartData
             {
                 label: 'Status Belajar',
                 data: datasetData,
-                borderColor: borderColors,
                 backgroundColor: backgroundColors,
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
+                borderWidth: 1,
             },
         ],
     };
 };
-
-
 
 
 
@@ -209,14 +250,30 @@ export const transformToERDData = (data: DataRow<string>[]): ERDData<string> => 
     const centerX = 250;
     const centerY = 250;
 
-    const nodes = data.map((row, index) => ({
-        id: String(index + 1),
-        data: { label: row.Nama },
-        position: {
-            x: centerX + radius * Math.cos((index / data.length) * 2 * Math.PI),
-            y: centerY + radius * Math.sin((index / data.length) * 2 * Math.PI)
-        }
-    }));
+    const nodes = data.map((row, index) => {
+        const fields = Object.keys(row).map(key => {
+            const fieldType: NodeDataType = getTypeFromValue(row[key]);
+
+            return {
+                name: key,
+                type: fieldType,
+                isPK: key === 'id',
+                isFK: false
+            };
+        });
+
+        return {
+            id: String(index + 1),
+            data: {
+                label: `${row.Nama}\n${fields.map(f => `${f.name}: ${f.type}${f.isPK ? ' (PK)' : ''}${f.isFK ? ' (FK)' : ''}`).join('\n')}`,
+                type: 'Normal' as NodeDataType
+            } as { label: string; type: NodeDataType },
+            position: {
+                x: centerX + radius * Math.cos((index / data.length) * 2 * Math.PI),
+                y: centerY + radius * Math.sin((index / data.length) * 2 * Math.PI)
+            }
+        } as Node<string>;
+    });
 
     const edges = nodes.map((node, index) => ({
         id: `e${node.id}-${(index + 2).toString()}`,
@@ -227,16 +284,49 @@ export const transformToERDData = (data: DataRow<string>[]): ERDData<string> => 
     return { nodes, edges };
 };
 
+const getTypeFromValue = (value: string | number | null): NodeDataType => {
+    if (typeof value === 'string') return 'String';
+    if (typeof value === 'number') return 'Number';
+    return 'Normal';
+};
+
+
+
+
+
+
+// export const transformToERDData = (data: DataRow<string>[]): ERDData<string> => {
+//     const radius = 200;
+//     const centerX = 250;
+//     const centerY = 250;
+
+//     const nodes = data.map((row, index) => ({
+//         id: String(index + 1),
+//         data: { label: row.Nama },
+//         position: {
+//             x: centerX + radius * Math.cos((index / data.length) * 2 * Math.PI),
+//             y: centerY + radius * Math.sin((index / data.length) * 2 * Math.PI)
+//         }
+//     }));
+
+//     const edges = nodes.map((node, index) => ({
+//         id: `e${node.id}-${(index + 2).toString()}`,
+//         source: node.id,
+//         target: (index + 2).toString()
+//     })).filter((_, index) => index < nodes.length - 1);
+
+//     return { nodes, edges };
+// };
+
 export default function VisualizationPage({ params }: VisualizationPageProps) {
     const router = useRouter();
     const [spreadsheetIdState, setSpreadsheetIdState] = useState<string | null>(null);
     const [rangeState, setRangeState] = useState<string | null>(null);
     const [data, setData] = useState<DataRow<string>[]>([]);
-    const [erdData, setErdData] = useState<ERDData<string>>({ nodes: [], edges: [] });
+    const [erdData, setErdData] = useState<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
     const [chartType, setChartType] = useState<'bar' | 'line' | 'radar' | 'polarArea' | 'bubble' | 'scatter'>("line");
     const [showChart, setShowChart] = useState(true);
     const toggleChartVisibility = () => setShowChart(!showChart);
-    // const [columns, setColumns] = useState<{ header: string; accessor: string; }[]>([]);
     const [columns, setColumns] = useState<ColumnDef<DataRow>[] | []>([]);
     const [loading, setLoading] = useState({
         table: true,
@@ -303,17 +393,19 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
         }
     }, [params, router]);
 
-    const handleNodeDragStop = (nodeId: string, newPosition: { x: number; y: number }) => {
-        setErdData(prevErdData => {
-            const updatedNodes = prevErdData.nodes.map(node => {
+    const handleNodeDragStop = (nodeId: string, position: { x: number; y: number }) => {
+        setErdData(prevState => {
+            const updatedNodes = prevState.nodes.map(node => {
                 if (node.id === nodeId) {
-                    return { ...node, position: newPosition };
+                    return { ...node, position };
                 }
                 return node;
             });
-            return { ...prevErdData, nodes: updatedNodes };
+
+            return { ...prevState, nodes: updatedNodes };
         });
     };
+
 
     const chartData = transformToChartData(data);
     const pieDoughnutData = transformToPieDoughnutData(data);
@@ -403,7 +495,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                     </div>
                                     <div className="md:w-1/2">
                                         <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
-                                        <VisualizationChart data={aciveLearn} chartType='line' />
+                                        <VisualizationChart data={aciveLearn} chartType='bar' />
                                     </div>
 
                                 </div>
