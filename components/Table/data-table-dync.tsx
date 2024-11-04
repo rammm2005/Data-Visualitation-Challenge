@@ -20,7 +20,7 @@ import {
 import { DataTablePagination } from "./pagination";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "../multi-select/select";
-import { Bird } from "lucide-react";
+import { Bird, Turtle, Rabbit } from "lucide-react";
 
 interface DataTableProps<TData extends Record<string, unknown>, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -42,9 +42,18 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
         pageSize: initialPageSize,
     });
     const [sorting, setSorting] = React.useState<SortingState>([]);
+
+    // Bird
     const [birdPosition, setBirdPosition] = React.useState(0);
     const [birdDirection, setBirdDirection] = React.useState(1);
 
+    // Turtle
+    const [turtlePosition, setTurtlePosition] = React.useState(0);
+    const [turtleDirection, setTurtleDirection] = React.useState(1);
+
+    // Rabbit 
+    const [rabbitPosition, setRabbitPosition] = React.useState(0);
+    const [rabbitDirection, setRabbitDirection] = React.useState(1);
 
     const handleMouseMove = (e: MouseEvent) => {
         const windowWidth = window.innerWidth;
@@ -52,8 +61,12 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
 
         const newPosition = ((mouseX / windowWidth) * 100) - 50;
         setBirdPosition(newPosition);
+        setTurtlePosition(newPosition);
+        setRabbitPosition(newPosition);
 
         setBirdDirection(mouseX < windowWidth / 2 ? -1 : 1);
+        setTurtleDirection(mouseX < windowWidth / 2 ? -1 : 1);
+        setRabbitDirection(mouseX < windowWidth / 2 ? -1 : 1);
     };
 
     React.useEffect(() => {
@@ -173,21 +186,38 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                             </TableRow>
                         ))
                     ) : (
-                        <TableRow>
-                            <TableCell
-                                colSpan={columns.length}
-                                className="h-32 w-full flex flex-col items-center justify-center text-center"
-                            >
-                                <div className="text-lg font-medium">No results found.</div>
-                                <Bird
-                                    className="h-20 w-20 mt-4"
-                                    style={{
-                                        transform: `translateX(${birdPosition}%) scaleX(${birdDirection})`,
-                                        transition: "transform 0.1s",
-                                    }}
-                                />
-                            </TableCell>
-                        </TableRow>
+                            <TableRow>
+                                <TableCell
+                                    colSpan={columns.length}
+                                    className="h-[30vh]"
+                                >
+                                    <div className="flex flex-col items-center justify-center">
+                                        <div className="text-lg font-medium">No results found.</div>
+                                        <div className="flex flex-row items-center space-x-6 opacity-85">
+                                            <Bird
+                                                className="h-16 w-16 mt-4"
+                                                style={{
+                                                    transform: `translateX(${birdPosition}%) scaleX(${birdDirection})`,
+                                                    transition: "transform 0.1s",
+                                                }}
+                                            />
+                                            <Turtle className="h-20 w-20 mt-4"
+                                                style={{
+                                                    transform: `translateX(${turtlePosition}%) scaleX(${turtleDirection})`,
+                                                    transition: "transform 0.1s",
+                                                }}
+                                            />
+                                            <Rabbit
+                                                className="h-16 w-16 mt-4"
+                                                style={{
+                                                    transform: `translateX(${rabbitPosition}%) scaleX(${rabbitDirection})`,
+                                                    transition: "transform 0.1s",
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                     )}
                 </TableBody>
 
