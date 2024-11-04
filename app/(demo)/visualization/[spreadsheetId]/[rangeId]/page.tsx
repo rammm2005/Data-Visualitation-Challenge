@@ -483,21 +483,26 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                             </div>
 
 
-                            <div className="flex flex-row gap-4 items-center">
-                                <div className="md:w-1/2">
+                            <div className="flex flex-col md:flex-row gap-40">
+                                <div className="md:w-2/5">
                                     <h2 className='text-xl font-bold mb-4'>Angkatan Overview</h2>
-                                    <PieDoughnutChart chartType='doughnut' data={NimChart} />
+                                    <div className="aspect-square">
+                                        <PieDoughnutChart chartType='doughnut' data={NimChart} />
+                                    </div>
                                 </div>
-                                <div className="flex flex-col gap-6 items-center w-full">
-                                    <div className="md:w-1/2">
+                                <div className="flex flex-col gap-6 md:w-3/5">
+                                    <div>
                                         <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
-                                        <VisualizationChart data={ChartGraduation} chartType='line' />
+                                        <div className="h-[300px]">
+                                            <VisualizationChart data={ChartGraduation} chartType='line' />
+                                        </div>
                                     </div>
-                                    <div className="md:w-1/2">
+                                    <div>
                                         <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
-                                        <VisualizationChart data={aciveLearn} chartType='bar' />
+                                        <div className="h-[300px]">
+                                            <VisualizationChart data={aciveLearn} chartType='bar' />
+                                        </div>
                                     </div>
-
                                 </div>
                             </div>
 
