@@ -507,7 +507,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                 ) : (
                                     <div className="md:w-full">
                                         <h2 className='text-xl font-bold mb-4'>Table Overview</h2>
-                                        <DataTable data={data} columns={columns} />
+                                        <DataTable data={data} columns={columns} initialPageSize={10} />
                                     </div>
                                 )}
                             </div>
