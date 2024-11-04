@@ -48,11 +48,65 @@ export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[]
     });
 };
 
-export const transformToChartData = (data: DataRow<string>[]): ChartDataProps<string> => {
-    const labels = data.map(row => row.Nama);
-    const datasetData = data.map(row => Number(row.Status) || 0);
+// export const transformToChartData = (data: DataRow<string>[]): ChartDataProps<string> => {
+//     const labels = data.map(row => row.Nama);
+//     const datasetData = data.map(row => Number(row.Status) || 0);
+
+//     const backgroundColors = labels.map((_, index) => {
+//         const hue = (index * 360) / labels.length;
+//         return `hsla(${hue}, 70%, 40%, 1)`;
+//     });
+
+//     return {
+//         labels,
+//         datasets: [
+//             {
+//                 label: 'Ages',
+//                 data: datasetData,
+//                 backgroundColor: backgroundColors,
+//             },
+//         ],
+//     };
+// };
+
+export const transformToChartData = (
+    data: DataRow<string>[],
+    filterBy: 'graduates' | 'active',
+    faculty?: string
+): ChartDataProps<string> => {
+    const filteredData = data.filter((row) => {
+        if (faculty && row.Fakultas !== faculty) {
+            return false;
+        }
+
+        if (filterBy === 'graduates') {
+            return row.Status === 'Graduated';
+        } else if (filterBy === 'active') {
+            return row.Status === 'Active';
+        }
+        return true;
+    });
+
+    const graduationCounts = filteredData.reduce((acc, row) => {
+        const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt;
+        if (graduationYear) {
+            const formattedMonthYear = formatMonthYear(graduationYear);
+            const date = formatDate(graduationYear);
+            acc[formattedMonthYear] = acc[formattedMonthYear] || { count: 0, dates: {} };
+            acc[formattedMonthYear].count += 1;
+            acc[formattedMonthYear].dates[date] = (acc[formattedMonthYear].dates[date] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, { count: number; dates: Record<string, number> }>);
+
+    const labels = Object.keys(graduationCounts);
+    const datasetData = labels.map((label) => graduationCounts[label].count);
 
     const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 50%, 0.2)`;
+    });
+    const borderColors = labels.map((_, index) => {
         const hue = (index * 360) / labels.length;
         return `hsla(${hue}, 70%, 40%, 1)`;
     });
@@ -61,13 +115,70 @@ export const transformToChartData = (data: DataRow<string>[]): ChartDataProps<st
         labels,
         datasets: [
             {
-                label: 'Ages',
+                label: filterBy === 'graduates' ? 'Graduates' : 'Active Students',
                 data: datasetData,
+                borderColor: borderColors,
                 backgroundColor: backgroundColors,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
             },
         ],
     };
 };
+
+
+// export const transformToChartDataLogICAllWork = (
+//     data: DataRow<string>[],
+//     filterBy: 'graduates' | 'active',
+//     faculty?: string
+// ): ChartDataProps<string> => {
+//     const filteredData = data.filter((row) => {
+//         if (faculty && row.Fakultas !== faculty) {
+//             return false;
+//         }
+//         if (filterBy === 'graduates') {
+//             return row.Status === 'Graduated';
+//         } else if (filterBy === 'active') {
+//             return row.Status === 'Active';
+//         }
+//         return true;
+//     });
+
+//     const chartData = filteredData.map((row) => {
+//         const graduationYear = row.TMT || row.tamat || row.Tamat || row.tmt;
+//         const year = graduationYear ? new Date(graduationYear).getFullYear() : 0;
+//         const value = Number(row.StatusValue) || 0;
+//         const size = Math.random() * 20 + 5;
+
+//         return { x: year, y: value, r: size };
+//     });
+
+//     const backgroundColors = chartData.map((_, index) => {
+//         const hue = (index * 360) / chartData.length;
+//         return `hsla(${hue}, 70%, 50%, 0.4)`;
+//     });
+
+//     const borderColors = chartData.map((_, index) => {
+//         const hue = (index * 360) / chartData.length;
+//         return `hsla(${hue}, 70%, 40%, 1)`;
+//     });
+
+//     return {
+//         labels: [],
+//         datasets: [
+//             {
+//                 label: filterBy === 'graduates' ? 'Graduates' : 'Active Students',
+//                 data: chartData,
+//                 backgroundColor: backgroundColors,
+//                 borderColor: borderColors,
+//                 borderWidth: 2,
+//                 hoverBackgroundColor: borderColors,
+//                 hoverBorderColor: borderColors,
+//             },
+//         ],
+//     };
+// };
 
 export const transformToPieDoughnutData = (data: DataRow<string>[]): ChartDataProps<string> => {
     const genderCounts = data.reduce((acc, row) => {
