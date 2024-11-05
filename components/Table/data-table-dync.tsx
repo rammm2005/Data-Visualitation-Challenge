@@ -43,37 +43,30 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
     });
     const [sorting, setSorting] = React.useState<SortingState>([]);
 
-    // Bird
+    // Responsive logic for animation components
     const [birdPosition, setBirdPosition] = React.useState(0);
     const [birdDirection, setBirdDirection] = React.useState(1);
-
-    // Turtle
     const [turtlePosition, setTurtlePosition] = React.useState(0);
     const [turtleDirection, setTurtleDirection] = React.useState(1);
-
-    // Rabbit 
     const [rabbitPosition, setRabbitPosition] = React.useState(0);
     const [rabbitDirection, setRabbitDirection] = React.useState(1);
 
     const handleMouseMove = (e: MouseEvent) => {
         const windowWidth = window.innerWidth;
         const mouseX = e.clientX;
-
-        const newPosition = ((mouseX / windowWidth) * 100) - 50;
+        const newPosition = (mouseX / windowWidth) * 100 - 50;
         setBirdPosition(newPosition);
         setTurtlePosition(newPosition);
         setRabbitPosition(newPosition);
-
         setBirdDirection(mouseX < windowWidth / 2 ? -1 : 1);
         setTurtleDirection(mouseX < windowWidth / 2 ? -1 : 1);
         setRabbitDirection(mouseX < windowWidth / 2 ? -1 : 1);
     };
 
     React.useEffect(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-
+        window.addEventListener("mousemove", handleMouseMove);
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener("mousemove", handleMouseMove);
         };
     }, []);
 
@@ -129,12 +122,12 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between space-x-2">
+            <div className="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0 md:space-x-2">
                 <Input
                     placeholder="Search..."
                     value={filterValue}
                     onChange={(e) => setFilterValue(e.target.value)}
-                    className="w-full"
+                    className="w-full md:w-1/2"
                 />
                 <MultiSelect
                     options={columns.map((col) => ({
@@ -144,52 +137,53 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                     onValueChange={handleColumnVisibilityChange}
                     defaultValue={columns.map((col) => col.header as string)}
                     placeholder="Select Columns"
-                    className="w-full"
+                    className="w-full md:w-1/2"
                 />
             </div>
 
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        {table.getHeaderGroups().map((headerGroup) =>
-                            headerGroup.headers.map((header) => (
-                                <TableHead
-                                    key={header.id}
-                                    onClick={() => header.column.toggleSorting()}
-                                    className="cursor-pointer"
-                                >
-                                    {header.isPlaceholder
-                                        ? null
-                                        : flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
-                                        )}
-                                    {header.column.getIsSorted() === "asc" && " 🔼"}
-                                    {header.column.getIsSorted() === "desc" && " 🔽"}
-                                </TableHead>
+            <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                    <TableHeader>
+                        <TableRow>
+                            {table.getHeaderGroups().map((headerGroup) =>
+                                headerGroup.headers.map((header) => (
+                                    <TableHead
+                                        key={header.id}
+                                        onClick={() => header.column.toggleSorting()}
+                                        className="cursor-pointer"
+                                    >
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                        {header.column.getIsSorted() === "asc" && " 🔼"}
+                                        {header.column.getIsSorted() === "desc" && " 🔽"}
+                                    </TableHead>
+                                ))
+                            )}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {table.getRowModel().rows.length ? (
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow key={row.id}>
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id}>
+                                            {flexRender(
+                                                cell.column.columnDef.cell,
+                                                cell.getContext()
+                                            )}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
                             ))
-                        )}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {table.getRowModel().rows.length ? (
-                        table.getRowModel().rows.map((row) => (
-                            <TableRow key={row.id}>
-                                {row.getVisibleCells().map((cell) => (
-                                    <TableCell key={cell.id}>
-                                        {flexRender(
-                                            cell.column.columnDef.cell,
-                                            cell.getContext()
-                                        )}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        ))
-                    ) : (
+                        ) : (
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-[30vh]"
+                                    className="h-[30vh] text-center"
                                 >
                                     <div className="flex flex-col items-center justify-center">
                                         <div className="text-lg font-medium">No results found.</div>
@@ -201,7 +195,8 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                                                     transition: "transform 0.1s",
                                                 }}
                                             />
-                                            <Turtle className="h-20 w-20 mt-4"
+                                            <Turtle
+                                                className="h-20 w-20 mt-4"
                                                 style={{
                                                     transform: `translateX(${turtlePosition}%) scaleX(${turtleDirection})`,
                                                     transition: "transform 0.1s",
@@ -218,10 +213,10 @@ export function DataTable<TData extends Record<string, unknown>, TValue>({
                                     </div>
                                 </TableCell>
                             </TableRow>
-                    )}
-                </TableBody>
-
-            </Table>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
 
             <DataTablePagination table={table} />
         </div>

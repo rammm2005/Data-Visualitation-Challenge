@@ -36,6 +36,7 @@ import {
 import { DataRow, StoredData, ChartDataProps, Node, NodeDataType, Edge, ERDData } from '@/types/data';
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { LoadingIndicator } from '@/components/loading/loading';
+import { Card } from '@/components/ui/card';
 
 export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[] => {
     const headers = fetchedData[0];
@@ -139,6 +140,39 @@ export const transformToChartData = (
 };
 
 
+
+export const transformChartSemester = (data: DataRow<string>[]): ChartDataProps<string> => {
+    const semesterCounts = data.reduce((acc, row) => {
+        const smt = row.Semester || row.semester || row.smt;
+        if (smt) {
+            const semester = parseInt(smt, 10);
+            if (semester >= 3 && semester <= 14) {
+                acc[semester] = (acc[semester] || 0) + 1;
+            }
+        }
+        return acc;
+    }, {} as Record<number, number>);
+
+    const labels = Array.from({ length: 12 }, (_, i) => `Semester ${i + 3}`);
+
+    const datasetData = labels.map((_, index) => semesterCounts[index + 3] || 0);
+
+    const backgroundColors = labels.map((_, index) => {
+        const hue = (index * 360) / labels.length;
+        return `hsla(${hue}, 70%, 50%, 0.6)`;
+    });
+
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Semester',
+                data: datasetData,
+                backgroundColor: backgroundColors,
+            },
+        ],
+    };
+};
 
 
 
@@ -341,19 +375,33 @@ export const getGraduationDetails = (data: DataRow<string>[], selectedMonthYear:
 
 export const transformActiveLearningChart = (data: DataRow<string>[]): ChartDataProps<string> => {
     const activeCounts = data.reduce((acc, row) => {
-        const status = row.aktif || row.Status;
-        const learningStatus = status?.toLowerCase() === 'aktif (belajar)' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
+        const kendala = row.kendala || row.Kendala;
+
+        const learningStatus = kendala?.toLowerCase().includes('iya') ? 'ada kendala (belajar)' : 'tidak ada kendala (belajar)';
         acc[learningStatus] = (acc[learningStatus] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    const labels = ['aktif (belajar)', 'tidak aktif (belajar)'];
-    const datasetData = [
-        activeCounts['aktif (belajar)'] || 0,
-        activeCounts['tidak aktif (belajar)'] || 0
-    ];
+    const activeLearningCount = activeCounts['ada kendala (belajar)'] || 0;
+    const inactiveLearningCount = activeCounts['tidak ada kendala (belajar)'] || 0;
+
+    const labels = ['ada kendala (belajar)', 'tidak ada kendala (belajar)'];
+
+    const datasetData = [activeLearningCount, inactiveLearningCount];
 
     const backgroundColors = ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'];
+
+    if (activeLearningCount === 0 && inactiveLearningCount === 0) {
+        return {
+            labels: [],
+            datasets: [{
+                label: 'Status Belajar',
+                data: [],
+                backgroundColor: backgroundColors,
+                borderWidth: 1,
+            }],
+        };
+    }
 
     return {
         labels,
@@ -367,6 +415,10 @@ export const transformActiveLearningChart = (data: DataRow<string>[]): ChartData
         ],
     };
 };
+
+
+
+
 
 
 
@@ -418,6 +470,28 @@ const getTypeFromValue = (value: string | number | null): NodeDataType => {
 
 
 
+export const chartUserIPK = (data: DataRow[], selectedNames: string[]): { chartData: ChartDataProps, ipk: number[] } => {
+    const ipkValues = selectedNames.map(selectedNama => {
+        const selectedData = data.find(row => row['Nama Lengkap'] === selectedNama);
+        return selectedData && selectedData['IPK'] !== null ? Number(selectedData['IPK']) : 0;
+    });
+
+    const chartData = {
+        labels: selectedNames,
+        datasets: [
+            {
+                label: 'IPK',
+                data: ipkValues,
+                backgroundColor: ['rgba(75, 192, 192, 0.2)'],
+                borderColor: ['rgba(75, 192, 192, 1)'],
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    return { chartData, ipk: ipkValues };
+};
+
 
 
 
@@ -461,6 +535,25 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
         secondChart: true,
         Erd: true,
     });
+    const [selectedNama, setSelectedNama] = useState<string>('');
+    const [chartData, setChartData] = useState<ChartDataProps>({ labels: [], datasets: [] });
+    const [selectedIPK, setSelectedIPK] = useState<number | null>(null);
+
+    const uniqueNames = Array.from(new Set(data.map(row => row['Nama Lengkap'])));
+
+    const handleNamaChange = (nama: string) => {
+        setSelectedNama(nama);
+        setLoading(prev => ({ ...prev, chart: true }));
+
+        const { chartData, ipk } = chartUserIPK(data, [nama]);
+
+        setChartData(chartData);
+
+        setSelectedIPK(ipk.length > 0 ? ipk[0] : null);
+
+        setLoading(prev => ({ ...prev, chart: false }));
+    };
+
 
     useEffect(() => {
         const { spreadsheetId, rangeId } = params;
@@ -534,11 +627,12 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     };
 
 
-    const chartData = transformToChartData(data, filterBy);
+    const chartDatas = transformToChartData(data, filterBy);
     const pieDoughnutData = transformToPieDoughnutData(data);
     const NimChart = transformChartNim(data);
     const ChartGraduation = transformGraduationChart(data);
     const aciveLearn = transformActiveLearningChart(data);
+    const chartSemester = transformChartSemester(data);
 
     return (
         <ContentLayout title="Visualisasi Data">
@@ -610,21 +704,32 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                             </div>
 
 
-                            <div className="flex flex-col md:flex-row gap-40">
-                                <div className="md:w-2/5">
-                                    <h2 className='text-xl font-bold mb-4'>Angkatan Overview</h2>
-                                    <div className="aspect-square">
-                                        <PieDoughnutChart chartType='doughnut' data={NimChart} />
+                            <div className="flex flex-col md:flex-row gap-10">
+                                <div className="flex flex-col gap-6 md:w-1/2">
+                                    <div className="md:w-full">
+                                        <h2 className='text-xl font-bold mb-4'>Angkatan Overview</h2>
+                                        <div className="">
+                                            <PieDoughnutChart chartType='doughnut' data={NimChart} />
+                                        </div>
+                                    </div>
+
+                                    <div className="md:w-full">
+                                        <h2 className='text-xl font-bold mb-4'>Semester Overview</h2>
+                                        <div className="">
+                                            <PieDoughnutChart chartType='pie' data={chartSemester} />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-6 md:w-3/5">
-                                    <div>
+
+                                <div className="flex flex-col gap-6 md:w-1/2">
+                                    <div className="md:w-full">
                                         <h2 className='text-xl font-bold mb-4'>Chart Kelulusan Overview</h2>
                                         <div className="h-[300px]">
                                             <VisualizationChart data={ChartGraduation} chartType='line' />
                                         </div>
                                     </div>
-                                    <div>
+
+                                    <div className="md:w-full">
                                         <h2 className='text-xl font-bold mb-4'>Chart Aktif Kuliah Overview</h2>
                                         <div className="h-[300px]">
                                             <VisualizationChart data={aciveLearn} chartType='bar' />
@@ -632,6 +737,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                     </div>
                                 </div>
                             </div>
+
 
                             <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
                                 {loading.table ? (
@@ -658,7 +764,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                 </div>
                             )} */}
 
-                            <div>
+                            <div className='mb-6'>
                                 <div className="flex flex-row gap-4 items-center filter-options mb-4">
                                     <label className="mr-4 flex flex-row gap-2 items-center">
                                         <input
@@ -707,13 +813,50 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                         ) : (
                                             <div className="md:w-full">
                                                 <h2 className="text-xl font-bold mb-4">Chart Overview</h2>
-                                                <VisualizationChart data={chartData} chartType={chartType} />
+                                                <VisualizationChart data={chartDatas} chartType={chartType} />
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
                         </div>
+
+                        <Card>
+                            <div className="px-5 py-5 mt-10">
+                                <Select onValueChange={handleNamaChange}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih Nama Lengkap" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {uniqueNames.map(name => (
+                                            <SelectItem key={name} value={name}>
+                                                {name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                {showChart && (
+                                    <div className="flex flex-col md:flex-row md:gap-10 md:items-start mt-5">
+                                        {loading.chart ? (
+                                            <LoadingIndicator message="Loading Chart IPK Line..." />
+                                        ) : (
+                                            <div className="md:w-full">
+                                                <h2 className="text-xl font-bold mb-4">Chart IPK Overview</h2>
+                                                <VisualizationChart data={chartData} chartType="line" />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {selectedNama && (
+                                    <div className="mt-4">
+                                        <p><strong>Nama:</strong> {selectedNama}</p>
+                                        <p><strong>IPK:</strong> {selectedIPK !== null ? selectedIPK.toFixed(2) : 'Data tidak tersedia'}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
 
                         <div className="flex flex-row md:flex-row md:gap-10 md:items-start my-24">
                             {

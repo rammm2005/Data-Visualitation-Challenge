@@ -129,7 +129,6 @@ export default function ExcelSheet() {
         }
 
         const { spreadsheetId } = parsedData;
-
         const range = data.range || parsedData.range;
 
         try {
@@ -137,12 +136,27 @@ export default function ExcelSheet() {
 
             if (editingId) {
                 const updatedLinks = links.map((item) =>
-                    item.id === editingId ? { ...item, link: data.link, spreadsheetId, range: data.range } : item
+                    item.id === editingId
+                        ? {
+                            ...item,
+                            link: data.link,
+                            spreadsheetId,
+                            range: data.range,
+                            updated_at: new Date().toISOString(),
+                        }
+                        : item
                 );
                 setLinks(updatedLinks);
                 saveToLocalStorage(updatedLinks);
             } else {
-                const newLink = { id: uuidv4(), link: data.link, spreadsheetId, range };
+                const newLink = {
+                    id: uuidv4(),
+                    link: data.link,
+                    spreadsheetId,
+                    range,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                };
                 const updatedLinks = [...links, newLink];
                 setLinks(updatedLinks);
                 saveToLocalStorage(updatedLinks);
@@ -168,6 +182,7 @@ export default function ExcelSheet() {
             setLoading(false);
         }
     };
+
 
 
     const handleEdit = (id: string) => {
