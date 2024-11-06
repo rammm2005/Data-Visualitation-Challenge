@@ -1,8 +1,6 @@
 import {
-    Tag,
     Users,
     Settings,
-    Bookmark,
     SquarePen,
     LayoutGrid,
     Link,

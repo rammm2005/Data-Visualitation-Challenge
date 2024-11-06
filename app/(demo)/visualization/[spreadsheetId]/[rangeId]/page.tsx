@@ -564,46 +564,52 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
             console.log('Stored Data: ', storedData);
 
             if (storedData) {
-                const parsedData: StoredData[] = JSON.parse(storedData);
-                const decodedRangeId = decodeURIComponent(rangeId);
-                const matchedItem = parsedData.find((item: StoredData) =>
-                    item.spreadsheetId === spreadsheetId && item.range === decodedRangeId
-                );
+                try {
+                    const parsedData: StoredData[] = JSON.parse(storedData);
+                    const decodedRangeId = decodeURIComponent(rangeId);
+                    const matchedItem = parsedData.find((item: StoredData) =>
+                        item.spreadsheetId === spreadsheetId && item.range === decodedRangeId
+                    );
 
-                if (matchedItem) {
-                    setLoading(prev => ({ ...prev, table: true, chart: true, secondChart: true, Erd: true }));
-                    setSpreadsheetIdState(matchedItem.spreadsheetId);
-                    setRangeState(matchedItem.range);
-                    fetchSheetData(matchedItem.spreadsheetId, matchedItem.range)
-                        .then(fetchedData => {
-                            if (fetchedData && fetchedData.length > 0) {
-                                console.log('Fetched Data: ', fetchedData);
-                                const transformedData = transformFetchedData(fetchedData);
+                    if (matchedItem) {
+                        setLoading(prev => ({ ...prev, table: true, chart: true, secondChart: true, Erd: true }));
+                        setSpreadsheetIdState(matchedItem.spreadsheetId);
+                        setRangeState(matchedItem.range);
 
-                                const headers = fetchedData[0];
-                                const dynamicColumns = headers.map((header: string) => ({
-                                    header: header,
-                                    accessorKey: header,
-                                    cell: (info: CellContext<DataRow, string | number>) => info.getValue()
-                                })) as ColumnDef<DataRow>[];
-                                setColumns(dynamicColumns);
-                                setData(transformedData);
+                        fetchSheetData(matchedItem.spreadsheetId, matchedItem.range)
+                            .then(fetchedData => {
+                                if (fetchedData && fetchedData.length > 0) {
+                                    console.log('Fetched Data: ', fetchedData);
+                                    const transformedData = transformFetchedData(fetchedData);
 
-                                console.log('Data to DataTable:', transformedData);
-                                console.log('Columns to DataTable:', dynamicColumns);
-                                setErdData(transformToERDData(transformedData));
-                            } else {
-                                console.error('No data fetched.');
-                            }
-                        })
-                        .catch((error) => {
-                            console.error('Error fetching data: ', error);
-                        })
-                        .finally(() => {
-                            setLoading(prev => ({ ...prev, table: false, chart: false, secondChart: false, Erd: false }));
-                        });
-                } else {
-                    console.error('No matching item found.');
+                                    const headers = fetchedData[0];
+                                    const dynamicColumns = headers.map((header: string) => ({
+                                        header: header,
+                                        accessorKey: header,
+                                        cell: (info: CellContext<DataRow, string | number>) => info.getValue()
+                                    })) as ColumnDef<DataRow>[];
+
+                                    setColumns(dynamicColumns);
+                                    setData(transformedData);
+                                    console.log('Data to DataTable:', transformedData);
+                                    console.log('Columns to DataTable:', dynamicColumns);
+
+                                    setErdData(transformToERDData(transformedData));
+                                } else {
+                                    console.error('No data fetched.');
+                                }
+                            })
+                            .catch((error) => {
+                                console.error('Error fetching data: ', error);
+                            })
+                            .finally(() => {
+                                setLoading(prev => ({ ...prev, table: false, chart: false, secondChart: false, Erd: false }));
+                            });
+                    } else {
+                        console.error('No matching item found.');
+                    }
+                } catch (error) {
+                    console.error('Error parsing stored data:', error);
                 }
             } else {
                 console.error('No stored data found.');
