@@ -848,19 +848,20 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                             <LoadingIndicator message="Loading Chart IPK Line..." />
                                         ) : (
                                             <div className="md:w-full">
-                                                <h2 className="text-xl font-bold mb-4">Chart IPK Overview</h2>
-                                                <VisualizationChart data={chartData} chartType="line" />
+                                                <h2 className="text-xl font-bold mb-4 ">Chart IPK Overview</h2>
+                                                {selectedNama && (
+                                                    <div className="mt-4 mb-4 bg-blue-700/30 opacity-90 px-4 py-4 rounded-lg ">
+                                                        <p className='text-lg font-semibold dark:text-slate-100 text-slate-950'><strong>Nama:</strong> {selectedNama}</p>
+                                                        <p className='text-lg font-semibold dark:text-slate-100 text-slate-950'><strong>IPK:</strong> {selectedIPK !== null ? selectedIPK.toFixed(2) : 'Data tidak tersedia'}</p>
+                                                    </div>
+                                                )}
+                                                <VisualizationChart data={chartData} chartType="bar" />
                                             </div>
                                         )}
                                     </div>
                                 )}
 
-                                {selectedNama && (
-                                    <div className="mt-4">
-                                        <p><strong>Nama:</strong> {selectedNama}</p>
-                                        <p><strong>IPK:</strong> {selectedIPK !== null ? selectedIPK.toFixed(2) : 'Data tidak tersedia'}</p>
-                                    </div>
-                                )}
+
                             </div>
                         </Card>
 
