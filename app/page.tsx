@@ -30,7 +30,7 @@ function Header() {
             <Link href="/dashboard">Dashboard</Link>
           </Button>
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
-            <Link href="https://ui.shadcn.com/">Learn More</Link>
+            <Link href="https://ui.shadcn.com/">Documentation</Link>
           </Button>
           <ModeToggle />
         </nav>
@@ -69,7 +69,7 @@ function Hero() {
           </Button>
           <Button size="lg" variant="outline" asChild>
             <Link href="https://ui.shadcn.com/">
-              Learn More
+              See Now
             </Link>
           </Button>
         </div>
