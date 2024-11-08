@@ -87,6 +87,7 @@ function DemoImage() {
             src="/assets/demo-1.jpg"
             alt="Dashboard Preview"
             layout="fill"
+            loading="eager"
             objectFit="cover"
             className="dark:hidden"
           />
@@ -94,6 +95,7 @@ function DemoImage() {
             src="/assets/demo-1.jpg"
             alt="Dashboard Preview (Dark)"
             layout="fill"
+            loading="eager"
             objectFit="cover"
             className="hidden dark:block"
           />
