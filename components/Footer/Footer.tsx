@@ -12,7 +12,7 @@ export function Footer() {
                         rel="noopener noreferrer"
                         className="font-medium underline underline-offset-4"
                     >
-                        shadcn/ui
+                        click here
                     </Link>
                     . The source code is made on{" "}
                     <Link
