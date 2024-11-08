@@ -30,7 +30,7 @@ function Header() {
             <Link href="/dashboard">Dashboard</Link>
           </Button>
           <Button variant="ghost" asChild className="hidden sm:inline-flex">
-            <Link href="https://ui.shadcn.com/">Documentation</Link>
+            <Link href="https://ui.shadcn.com/">Learn More</Link>
           </Button>
           <ModeToggle />
         </nav>
