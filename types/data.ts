@@ -19,7 +19,7 @@ export type ChartDataProps<T extends string = string> = {
         borderColor?: string[];
         borderWidth?: number;
         fill?: boolean;
-        tension?: number;
+        tension?: number; cutout?: string;
     }[];
 };
 

@@ -494,6 +494,137 @@ export const chartUserIPK = (data: DataRow[], selectedNames: string[]): { chartD
 
 
 
+export const chartUserIPKBelow = (
+    data: DataRow[],
+    ipkCategory: 'below2' | 'between2and3' | 'above3',
+    chartType: 'bar' | 'line' | 'pie' | 'radar' | 'polarArea' | 'bubble' | 'scatter'
+): { chartData: ChartDataProps, ipk: number[], totalPeople: number, totalPeopleChartData: ChartDataProps } => {
+
+    const filterCriteria = {
+        below2: (ipk: number) => ipk < 2,
+        between2and3: (ipk: number) => ipk >= 2 && ipk <= 3,
+        above3: (ipk: number) => ipk > 3,
+    };
+
+    const filteredData = data.filter(row =>
+        row['IPK'] !== null && filterCriteria[ipkCategory](Number(row['IPK']))
+    );
+
+    const selectedNames = filteredData.map(row => row['Nama Lengkap']);
+    const ipkValues = filteredData.map(row => row['IPK'] ? Number(row['IPK']) : 0);
+
+    const totalPeople = filteredData.length;
+
+    let chartData: ChartDataProps = {
+        labels: selectedNames,
+        datasets: [
+            {
+                label: 'IPK',
+                data: ipkValues,
+                backgroundColor: ['rgba(75, 192, 192, 0.2)'],
+                borderColor: ['rgba(75, 192, 192, 1)'],
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    // if (chartType === 'bubble' || chartType === 'scatter') {
+    //     chartData = {
+    //         labels: selectedNames,
+    //         datasets: [
+    //             {
+    //                 label: 'IPK',
+    //                 data: ipkValues.map((ipk, index) => ({
+    //                     x: index,
+    //                     y: ipk,
+    //                     r: 5,
+    //                 })),
+    //                 backgroundColor: ['rgba(75, 192, 192, 0.2)'],
+    //                 borderColor: ['rgba(75, 192, 192, 1)'],
+    //                 borderWidth: 1,
+    //             },
+    //         ],
+    //     };
+    // }
+
+
+    const totalPeopleChartData = {
+        labels: [ipkCategory],
+        datasets: [
+            {
+                label: 'Total People',
+                data: [totalPeople],
+                backgroundColor: ['rgba(153, 102, 255, 0.2)'],
+                borderColor: ['rgba(153, 102, 255, 1)'],
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    if (chartType === 'pie') {
+        chartData = {
+            labels: [ipkCategory],
+            datasets: [
+                {
+                    label: 'Total People in Category',
+                    data: [totalPeople],
+                    backgroundColor: ['rgba(153, 102, 255, 0.2)', 'rgba(75, 192, 192, 0.2)'],
+                    borderColor: ['rgba(153, 102, 255, 1)', 'rgba(75, 192, 192, 1)'],
+                    borderWidth: 1,
+                },
+            ],
+        };
+    }
+
+
+    return { chartData, ipk: ipkValues, totalPeople, totalPeopleChartData };
+};
+
+
+const chartIPKCategoryPieDoughnut = (
+    data: DataRow[],
+    chartType: 'pie' | 'doughnut'
+): { chartData: ChartDataProps; totalPeople: number[] } => {
+    const filterCriteria = {
+        below2: (ipk: number) => ipk < 2,
+        between2and3: (ipk: number) => ipk >= 2 && ipk <= 3,
+        above3: (ipk: number) => ipk > 3,
+    };
+
+    const below2Data = data.filter(row => row['IPK'] !== null && filterCriteria.below2(Number(row['IPK'])));
+    const between2and3Data = data.filter(row => row['IPK'] !== null && filterCriteria.between2and3(Number(row['IPK'])));
+    const above3Data = data.filter(row => row['IPK'] !== null && filterCriteria.above3(Number(row['IPK'])));
+
+    const totalBelow2 = below2Data.length;
+    const totalBetween2and3 = between2and3Data.length;
+    const totalAbove3 = above3Data.length;
+
+    const chartData: ChartDataProps = {
+        labels: ['Below 2', 'Between 2 and 3', 'Above 3'],
+        datasets: [
+            {
+                label: 'Total People',
+                data: [totalBelow2, totalBetween2and3, totalAbove3],
+                backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)'],
+                borderColor: ['rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'],
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    if (chartType === 'doughnut') {
+        chartData.datasets[0].cutout = '70%';
+    }
+
+    return { chartData, totalPeople: [totalBelow2, totalBetween2and3, totalAbove3] };
+};
+
+
+
+
+
+
+
 
 // export const transformToERDData = (data: DataRow<string>[]): ERDData<string> => {
 //     const radius = 200;
@@ -529,6 +660,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     const toggleChartVisibility = () => setShowChart(!showChart);
     const [columns, setColumns] = useState<ColumnDef<DataRow>[] | []>([]);
     const [filterBy, setFilterBy] = useState<'graduates' | 'active' | 'fakultas'>('graduates');
+    const [selectedCategory, setSelectedCategory] = useState<'below2' | 'between2and3' | 'above3'>('below2');
     const [loading, setLoading] = useState({
         table: true,
         chart: true,
@@ -540,6 +672,12 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     const [selectedIPK, setSelectedIPK] = useState<number | null>(null);
 
     const uniqueNames = Array.from(new Set(data.map(row => row['Nama Lengkap'])));
+
+    const handleCategoryChange = (category: 'below2' | 'between2and3' | 'above3') => {
+        setSelectedCategory(category);
+        const { chartData } = chartUserIPKBelow(data, category, chartType);
+        setChartData(chartData);
+    };
 
     const handleNamaChange = (nama: string) => {
         setSelectedNama(nama);
@@ -634,11 +772,13 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
 
 
     const chartDatas = transformToChartData(data, filterBy);
-    const pieDoughnutData = transformToPieDoughnutData(data);
+    // const pieDoughnutData = transformToPieDoughnutData(data);
     const NimChart = transformChartNim(data);
     const ChartGraduation = transformGraduationChart(data);
     const aciveLearn = transformActiveLearningChart(data);
     const chartSemester = transformChartSemester(data);
+    const ipkBelow = chartUserIPKBelow(data, selectedCategory, chartType);
+    const ipkBelowPie = chartIPKCategoryPieDoughnut(data, 'pie');
 
     return (
         <ContentLayout title="Visualisasi Data">
@@ -662,7 +802,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                 </BreadcrumbList>
             </Breadcrumb>
 
-            <div>
+            <div className='space-y-6'>
                 <div className='mb-10 mt-6'>
                     <h1 className='text-2xl font-bold'>Visualisasi Data</h1>
                     <p className="text-gray-600 dark:text-slate-300">
@@ -770,7 +910,44 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                 </div>
                             )} */}
 
-                            <div className='mb-6'>
+
+                        </div>
+
+                        {/* chart Chart IPK Students in range Overview */}
+                        <Card>
+                            <div className="px-5 py-5 mt-10">
+                                <Select onValueChange={(value) => handleCategoryChange(value as 'below2' | 'between2and3' | 'above3')} defaultValue="between2and3">
+                                    <SelectTrigger className="w-40">
+                                        <SelectValue placeholder="Select Chart Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {['below2', 'between2and3', 'above3'].map(type => (
+                                            <SelectItem key={type} value={type}>
+                                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                {showChart && (
+                                    <div className="flex flex-col md:flex-row md:gap-10 md:items-start mt-5">
+                                        {loading.chart ? (
+                                            <LoadingIndicator message="Loading Chart IPK Student Line..." />
+                                        ) : (
+                                            <div className="md:w-full">
+                                                <h2 className="text-xl font-bold mb-4">Chart IPK Students Overview</h2>
+                                                <VisualizationChart data={ipkBelow.chartData} chartType={chartType} />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+
+
+                        {/* chart Chart Overview RAND */}
+                        <Card>
+                            <div className='mb-6 mt-6 px-5 py-5'>
                                 <div className="flex flex-row gap-4 items-center filter-options mb-4">
                                     <label className="mr-4 flex flex-row gap-2 items-center">
                                         <input
@@ -825,8 +1002,12 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </Card>
 
+
+
+
+                        {/* chart Chart IPK for spresifict Students Overview */}
                         <Card>
                             <div className="px-5 py-5 mt-10">
                                 <Select onValueChange={handleNamaChange}>
@@ -872,11 +1053,9 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                 ) : (
                                     <>
                                         <div className="md:w-1/2">
-                                            <PieDoughnutChart data={pieDoughnutData} />
+                                            <PieDoughnutChart data={ipkBelowPie.chartData} />
                                         </div>
-                                        <div className="md:w-1/2">
-                                            <PieDoughnutChart chartType='doughnut' data={pieDoughnutData} />
-                                        </div>
+
                                     </>
                                 )
                             }
