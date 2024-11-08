@@ -71,7 +71,14 @@ export default function ExcelSheet() {
         {
             accessorKey: "link",
             header: "Link",
-            cell: (info) => info.getValue(),
+            cell: (info) => {
+                const link: string = info.getValue() as string;
+                return (
+                    <Link target="_blank" className="hover:text-blue-500 transition-all ease-in-out duration-300" href={link} passHref>
+                        {link}
+                    </Link>
+                );
+            },
         },
         {
             accessorKey: "spreadsheetId",
