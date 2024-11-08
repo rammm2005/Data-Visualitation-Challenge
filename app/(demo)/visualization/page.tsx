@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from '@/components/ui/button';
 import { Loader2, FileSpreadsheet, Clock, Grid2x2Check, DatabaseZap, Search, Bird } from 'lucide-react';
+import Image from 'next/image';
 
 export default function SpreadsheetSelection() {
     const router = useRouter();
@@ -115,7 +116,7 @@ export default function SpreadsheetSelection() {
                             <Clock className="h-6 w-6" />
                             <div>
                                 <p className="text-sm font-semibold">Pilihan Terakhir:</p>
-                                <p className="text-sm">{recentChoice.link}</p>
+                                <Link href={recentChoice.link} target='_blank' className="text-sm">{recentChoice.link}</Link>
                             </div>
                         </div>
                     )}
@@ -181,12 +182,14 @@ export default function SpreadsheetSelection() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     ) : (
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Tidak ada link yang disimpan. <b><Link href="/excel-sheet">Click disini untuk menambahkan</Link></b>
-                        </p>
+                        <div className='text-center w-full items-center justify-center flex flex-col'>
+                            <Image className='w-[50%] h-auto items-center' src={'/assets/404-error-with-a-cute-animal-animate.svg'} alt='No Data Avaible' width='100' height='100' />
+                            <h1 className='text-3xl font-bold'>404 - No API Link</h1>
+                            <p className='text-lg flex flex-row gap-2'>Oops! The API Link in This Page is Not Created Yet <Link href="/excel-sheet" className='text-blue-500 hover:text-blue-600 transition-all ease-in-out duration-300'>Click here for Added New.</Link></p>
+                        </div>
                     )}
                 </div>
-            </ContentLayout>
+            </ContentLayout >
         </>
     );
 }

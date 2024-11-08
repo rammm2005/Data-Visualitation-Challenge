@@ -26,6 +26,7 @@ import { fetchSheetData } from '@/lib/fetchData';
 import InteractiveERD from '@/components/ERD/InteractiveERD';
 import { ChartArea, CircleHelp } from 'lucide-react';
 import PieDoughnutChart from '@/components/chart/PieDoughnutChart';
+import Image from 'next/image';
 
 import {
     Tooltip,
@@ -1076,7 +1077,11 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                         </div>
                     </>
                 ) : (
-                    <div>No Data Available</div>
+                    <div className='text-center w-full items-center justify-center flex flex-col'>
+                        <Image className='w-[50%] h-auto items-center' src={'/assets/404-error-with-a-cute-animal-animate.svg'} alt='No Data Avaible' width='100' height='100' />
+                        <h1 className='text-3xl font-bold'>404 - Data Lost</h1>
+                        <p className='text-lg flex flex-row gap-2'>Oops! The Data in This Page is Lost <p className='text-blue-500'>Please Cross Check your API.</p></p>
+                    </div>
                 )}
             </div>
         </ContentLayout>
