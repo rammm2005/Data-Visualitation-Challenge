@@ -1047,21 +1047,23 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                             </div>
                         </Card>
 
-                        <div className="flex flex-row md:flex-row md:gap-10 md:items-start my-24">
-                            {
-                                loading.secondChart ? (
-                                    <LoadingIndicator message="Loading Pie & Dounuts Charts..." />
-                                ) : (
-                                    <>
-                                        <div className="md:w-1/2">
-                                            <PieDoughnutChart data={ipkBelowPie.chartData} />
-                                        </div>
+                        <Card>
+                            <div className="flex flex-row md:flex-row md:gap-10 md:items-start my-8 px-8">
+                                {
+                                    loading.secondChart ? (
+                                        <LoadingIndicator message="Loading Pie & Dounuts Charts..." />
+                                    ) : (
+                                        <>
+                                            <div className="md:w-1/2">
+                                                <h2 className="text-xl font-bold mb-4">Chart IPK Students</h2>
+                                                <PieDoughnutChart data={ipkBelowPie.chartData} />
+                                            </div>
 
-                                    </>
-                                )
-                            }
-
-                        </div>
+                                        </>
+                                    )
+                                }
+                            </div>
+                        </Card>
 
                         <div className="py-10 px-6 grid grid-col-1 gap-10 border rounded-lg shadow-md">
                             {
