@@ -38,6 +38,7 @@ import { DataRow, StoredData, ChartDataProps, Node, NodeDataType, Edge, ERDData 
 import { ColumnDef, CellContext } from '@tanstack/react-table';
 import { LoadingIndicator } from '@/components/loading/loading';
 import { Card } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[] => {
     const headers = fetchedData[0];
@@ -73,36 +74,38 @@ export const transformFetchedData = (fetchedData: string[][]): DataRow<string>[]
 
 export const transformToChartData = (
     data: DataRow<string>[],
-    filterBy: 'graduates' | 'active' | 'fakultas',
+    filterBy: 'semester' | 'kendala' | 'ipk',
     faculty?: string
 ): ChartDataProps<string> => {
     let countsByCategory: Record<string, number> = {};
 
-    if (filterBy === 'graduates') {
+    if (filterBy === 'semester') {
         countsByCategory = data.reduce((acc, row) => {
-            const graduationYear = row.TMT;
-            if (graduationYear) {
-                const formattedMonthYear = formatMonthYear(graduationYear);
-                acc[formattedMonthYear] = (acc[formattedMonthYear] || 0) + 1;
+            const semester = Number(row.semester || row.Semester);
+            if (!isNaN(semester)) {
+                const semesterKey = `Semester ${semester}`;
+                acc[semesterKey] = (acc[semesterKey] || 0) + 1;
             }
             return acc;
         }, {} as Record<string, number>);
-    } else if (filterBy === 'active') {
+    } else if (filterBy === 'kendala') {
         countsByCategory = data.reduce((acc, row) => {
-            const status = row.aktif || row.Status;
-            const learningStatus = status?.toLowerCase() === 'aktif (belajar)' ? 'aktif (belajar)' : 'tidak aktif (belajar)';
-            acc[learningStatus] = (acc[learningStatus] || 0) + 1;
+            const status = row.Kendala || row.kendala;
+            const kendalaKata = ['iyaa', 'iya'];
+            const learningStatus = kendalaKata.some(kendala => status?.toLowerCase().includes(kendala))
+                ? 'Ada Kendala (Belajar)'
+                : 'Tidak ada Kendala (belajar)'; acc[learningStatus] = (acc[learningStatus] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
-    } else if (filterBy === 'fakultas') {
+    } else if (filterBy === 'ipk') {
         countsByCategory = data.reduce((acc, row) => {
             if (faculty) {
-                if (row.Jurusan === faculty) {
-                    const facultyName = row.Jurusan;
+                if (row.ipk || row.IPK || row.Ipk === faculty) {
+                    const facultyName = row.ipk || row.IPK || row.Ipk;
                     acc[facultyName] = (acc[facultyName] || 0) + 1;
                 }
             } else {
-                const facultyName = row.Jurusan;
+                const facultyName = row.ipk || row.IPK || row.Ipk;
                 acc[facultyName] = (acc[facultyName] || 0) + 1;
             }
             return acc;
@@ -122,7 +125,7 @@ export const transformToChartData = (
     });
 
     const datasetLabel =
-        filterBy === 'graduates' ? 'Graduates' : filterBy === 'active' ? 'Active Students' : 'Fakultas Data';
+        filterBy === 'semester' ? 'semester' : filterBy === 'kendala' ? 'kendala Students' : 'ipk Data';
 
     return {
         labels,
@@ -660,7 +663,7 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
     const [showChart, setShowChart] = useState(true);
     const toggleChartVisibility = () => setShowChart(!showChart);
     const [columns, setColumns] = useState<ColumnDef<DataRow>[] | []>([]);
-    const [filterBy, setFilterBy] = useState<'graduates' | 'active' | 'fakultas'>('graduates');
+    const [filterBy, setFilterBy] = useState<'semester' | 'kendala' | 'ipk'>('semester');
     const [selectedCategory, setSelectedCategory] = useState<'below2' | 'between2and3' | 'above3'>('below2');
     const [loading, setLoading] = useState({
         table: true,
@@ -948,47 +951,30 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
 
                         {/* chart Chart Overview RAND */}
                         <Card>
-                            <div className='mb-6 mt-6 px-5 py-5'>
-                                <div className="flex flex-row gap-4 items-center filter-options mb-4">
-                                    <label className="mr-4 flex flex-row gap-2 items-center">
-                                        <input
-                                            type="radio"
-                                            name="filterBy"
-                                            value="graduates"
-                                            checked={filterBy === 'graduates'}
-                                            onChange={() => setFilterBy('graduates')}
-                                        />
-                                        Graduates
-                                    </label>
-                                    <label className="mr-4 flex flex-row gap-2 items-center">
-                                        <input
-                                            type="radio"
-                                            name="filterBy"
-                                            value="active"
-                                            checked={filterBy === 'active'}
-                                            onChange={() => setFilterBy('active')}
-                                        />
-                                        Active Students
-                                    </label>
-
-                                    <label className="mr-4 flex flex-row gap-2 items-center">
-                                        <input
-                                            type="radio"
-                                            name="filterBy"
-                                            value="fakultas"
-                                            checked={filterBy === 'fakultas'}
-                                            onChange={() => setFilterBy('fakultas')}
-                                        />
-                                        Fakultas
-                                    </label>
-                                    {/* <input
-                                        type="text"
-                                        placeholder="Enter Faculty (Optional)"
-                                        value={faculty || ''}
-                                        onChange={(e) => setFaculty(e.target.value || undefined)}
-                                        className="ml-4 p-2 border rounded"
-                                    /> */}
+                            <div className='px-6'>
+                                <div className="mb-6 mt-6 py-5">
+                                    <label className="text-lg font-semibold mb-4 block">Filter Data Berdasarkan:</label>
+                                    <RadioGroup
+                                        onValueChange={(value) => setFilterBy(value as "ipk" | "semester" | "kendala")}
+                                        defaultValue={filterBy}
+                                        className="flex flex-row items-center gap-4 space-y-3"
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <RadioGroupItem value="semester" id="semester" />
+                                            <label htmlFor="semester" className="cursor-pointer font-normal">Semester Mahasiswa</label>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <RadioGroupItem value="kendala" id="kendala" />
+                                            <label htmlFor="kendala" className="cursor-pointer font-normal">Kendala Siswa</label>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                            <RadioGroupItem value="ipk" id="ipk" />
+                                            <label htmlFor="ipk" className="cursor-pointer font-normal">IPK Overview</label>
+                                        </div>
+                                    </RadioGroup>
                                 </div>
+
+
 
                                 {showChart && (
                                     <div className="flex flex-col md:flex-row md:gap-10 md:items-start">
@@ -996,7 +982,6 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                             <LoadingIndicator message="Loading Chart Line..." />
                                         ) : (
                                             <div className="md:w-full">
-                                                <h2 className="text-xl font-bold mb-4">Chart Overview</h2>
                                                 <VisualizationChart data={chartDatas} chartType={chartType} />
                                             </div>
                                         )}
@@ -1054,9 +1039,11 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                                         <LoadingIndicator message="Loading Pie & Dounuts Charts..." />
                                     ) : (
                                         <>
-                                            <div className="md:w-1/2">
-                                                <h2 className="text-xl font-bold mb-4">Chart IPK Students</h2>
-                                                <PieDoughnutChart data={ipkBelowPie.chartData} />
+                                            <div className="w-full flex flex-col justify-center items-center">
+                                                <div className="md:w-1/2">
+                                                    <h2 className="text-xl font-bold mb-4">Chart IPK Students</h2>
+                                                    <PieDoughnutChart data={ipkBelowPie.chartData} />
+                                                </div>
                                             </div>
 
                                         </>
@@ -1086,6 +1073,6 @@ export default function VisualizationPage({ params }: VisualizationPageProps) {
                     </div>
                 )}
             </div>
-        </ContentLayout>
+        </ContentLayout >
     );
 }

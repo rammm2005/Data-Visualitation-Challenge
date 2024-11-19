@@ -1,7 +1,7 @@
 import {
-    Users,
+    // Users,
     Settings,
-    SquarePen,
+    // SquarePen,
     LayoutGrid,
     Link,
     LucideIcon,
@@ -43,21 +43,21 @@ export function getMenuList(pathname: string): Group[] {
         {
             groupLabel: "Contents",
             menus: [
-                {
-                    href: "",
-                    label: "Posts",
-                    icon: SquarePen,
-                    submenus: [
-                        {
-                            href: "/posts",
-                            label: "All Posts"
-                        },
-                        {
-                            href: "/posts/new",
-                            label: "New Post"
-                        }
-                    ]
-                },
+                // {
+                //     href: "",
+                //     label: "Posts",
+                //     icon: SquarePen,
+                //     submenus: [
+                //         {
+                //             href: "/posts",
+                //             label: "All Posts"
+                //         },
+                //         {
+                //             href: "/posts/new",
+                //             label: "New Post"
+                //         }
+                //     ]
+                // },
                 {
                     href: "/visualization",
                     label: "Data Visualitations",
@@ -73,11 +73,11 @@ export function getMenuList(pathname: string): Group[] {
         {
             groupLabel: "Settings",
             menus: [
-                {
-                    href: "/users",
-                    label: "Users",
-                    icon: Users
-                },
+                // {
+                //     href: "/users",
+                //     label: "Users",
+                //     icon: Users
+                // },
                 {
                     href: "/account",
                     label: "Account",
