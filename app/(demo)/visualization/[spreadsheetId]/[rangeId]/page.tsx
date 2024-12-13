@@ -380,7 +380,7 @@ export const getGraduationDetails = (data: DataRow<string>[], selectedMonthYear:
 export const transformActiveLearningChart = (data: DataRow<string>[]): ChartDataProps<string> => {
     const activeCounts = data.reduce((acc, row) => {
         const kendala = row.kendala || row.Kendala;
-
+        
         const learningStatus = kendala?.toLowerCase().includes('iya') ? 'ada kendala (belajar)' : 'tidak ada kendala (belajar)';
         acc[learningStatus] = (acc[learningStatus] || 0) + 1;
         return acc;
